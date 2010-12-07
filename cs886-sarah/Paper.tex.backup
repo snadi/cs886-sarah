@@ -140,80 +140,102 @@ algorithm built in WEKA~\cite{witten2005data}.
 \section{Models Used}
 \label{sec:modelsused}
 
-We experimented with several models to predict change sets. First, we just used Weka's BayesNet classifier to build the structure and estimate the CPTs of
-the network. In the second model, we used Banjo to learn the structure of the network, and then we used Weka to learn the CPTs. In the third model, we imposed
-the structure of the network from the relationships already existing between CIs in the CMDB. Finally, in the fourth model, we tried to assume that CIs not in
-a change order are unobserved data, and therefore have missing values.
+In order to construct a Bayesian network which we can use to make predictions, there were two steps involved. First, determining the structure of the actual
+network, and then estimating the Conditional Probability Tables (CPT). There were different ways in which we could estimate the structure of the network, and
+so we built a model for each technique. However, for all models, we used the SimpleEstimator algorithm~\cite{written2005data} built in Weka to calculate the
+CPTs. 
 
-In order to be able to test things properly, we chose a small dataset to be able to build our model. We used observations from three months data from January 1,
-2008 to March 31, 2008 to build the model. However, in such a short period, there were already 2,841 distinct CIs appearing and 2,229 observations (i.e. change
-orders). Therefore, in each model, some data preprocessing was done before building the model since having a network with over 2000 variables was very hard to
-deal with.
+Before building any of the models, some data preprocessing was necessary. We first describe this preprocessing, and then proceed to explain each of the FOUR
+models built.
 
-\subsection{Model 1}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=7cm]{graphics/constructingmodel.png}
+\caption{Generating the Bayesian Network}
+\label{fig:process}
+\end{figure}
+
+\subsubsection{Data Preprocessing}
+The original data set has 7,999 distinct CIs, and 27,305 change orders. This amount of data was infeasible to work with as no tool could handle such a large
+amount of variables in a Bayesian network. For the purposes of this project, which is mainly to experiment with Bayesian techniques for change set prediction,
+it is sufficient to choose a small representative subset of the data. Accordingly, in order to be able to test things properly, we used observations from three
+months data from January 1, 2008 to March 31, 2008 to build the model. However, even in such a short period, there were already 2,841 distinct CIs appearing and
+2,229 observations (i.e. change orders). Therefore, we needed to perform further data preprocessing. 
+
+First, we removed all CIs that have changed less than 12 times within this time frame  (i.e were associated with 12 different change orders in our training
+observations). There is no particular reason for choosing 12 as a cut off. It simply gave a feasible data set to deal with. This yielded 120 distinct CIs. Then,
+in order to slightly increase our variable space to include other related CIs, we found all the parent CIs related to these 120 CIs from the CMDB perspective.
+However, we ignored three common, and not extremely meaningful relations, which are  ``supports'', ``is location for'', and ``backs up''. Adding the related
+parent CIs, we now had a set of 241 CIs. However, some of the added parent CIs may not be in the original set of 2,841 CIs. Accordingly, we just kept CIs tht
+appeared more than 12 times or were in the set of related CIs. This provided us our final data set of 170 CIs which we use throughout our models for fair
+comparison. Additionally, filtering out CIs meant filtering out some of the observations that did not have any CIs satisfying our criteria. This led to us
+having 1,305 observations instead of 2,229 which was a more manegeable set. Accordingly, our training data set consisted of 170 variables (CIs), and 1,305
+observations (change sets).
+
+DESCRIBE GENERATED OBSERVATIONS FILE
+
+FIGURE FOR DATA PROCESSING
+
+\subsection{Model 1 (Banjo)}
 \label{sec:model1}
 
+For the first model, we used Banjo to learn the structure of the Bayesian network from the training data which used a Greedy searching algorithm. Banjo
+produced five different top-scoring networks (having the same score), and we simply chose one of them as the network to be used. This network was then
+formatted as an BIF XML file, and was fed into Weka's network analyzer tool. After setting the data set to be the observations in our training set, Weka
+learned the CPTs for the network produced by Banjo. This complete network was then saved as an BIF XML file to be used by JavaBayes for general inference.
 
-\subsection{Model 2}
-\label{sec:model2}
 
-\subsubsection*{Data Preprocessing}
+\subsection{Model 2 (CMDB Relationships)}
 
-For this model, we first got a list of all the CIs that appeared more than 12 times (i.e were associated with 12 different change orders in our training
-observations). This yielded 120 distinct CIs. Then, in order to slightly increase our variable space to include other related CIs, we found all the parent CIs
-related to these 120 CIs from the CMDB perspective. However, we ignored three common, and not extremely meaningful relations, which are  ``supports'', ``is
-location for'', and ``backs up''. Adding the related parent CIs, we now had a set of 241 CIs. We then went back, and iterated through the observations, and
-kept only observations for CIs that either had more than 12 different change orders or were related to these CIs (i.e that occurred in the set of 241 CIs).
-This, finally, gave us a set of 170 distinct CIs which we used for our model. Additionally, filtering out CIs meant filtering out some of the observations that
-did not have any CIs satisfying our criteria. This led to us having 1305 observations instead of 2841 which was a more manegeable set.
+For the second model, we used the relations existing in the CMDB to infer the structure of the network (that is place the edges between the nodes). We used two
+variations for this. The first was to follow the direction of the relationship edges in the CMDB. That is if there is an edge from A to B, we will place an
+edge in the Bayesian network from A to B (we will call this model 2A). The second was to reverse the direction of the relationship edges in the CMDB. That is,
+if there is an edge from A to B, we will place an edge in the Bayesian network from B to A (we will call this model 2B). In both cases, however, we chose to
+ignore some relationship edges (WHY, TRY WITHOUT). There was one problem, however, with the generated network. Two of the CIs had more than 15 parents to them
+which means that their CPTs will be intractable to compute. For those two CIs, we simply removed all their parents to make the computation tractable.
 
-\subsubsection*{Building the Model}
 
-Given that we had our training set, the next step was to build the network which has two parts: building the structure, and estimating the CPTs. Unfortunately,
-Weka mainly focused on classification and clustering which is not exactly the same problem we are tackling here. However, Weka did provide a functionality to
-learn the CPT of a network given a certain structure. We, therefore, used Banjo to build the structure of the network (Banjo does not estimate CPTs), and then
-used Weka to estimate the CPTs on the produced network. In both cases, the same observations file was used to ensure that its the same data. However, each tool
-accepted the data in different formats, so some translation was necessary there. After Weka has added the CPT information to the graph, we used this as the
-final Bayesian network on which to do our analysis.
+\subsection{Model 3 (Missing Data)}
+
+This model is the same as the second model, except that we experimented with the missing data feature in Weka. Weka allows the user to specify missing values
+for any variable by simply putting a '?' instead of its value. Therefore, instead of putting the CIs that did not appear in a change order as false, we put a
+'?' in their place. This seemed closer to practice, because in reality, we are not sure whether this CI actually changed or not. Therefore, this model also has
+two parts: model 3A and model 3B where the first uses the CMDB relationships in their same direction, and the second uses the reverse direction.
+
+\begin{algorithm}[tb]
+   \caption{Bubble Sort}
+   \label{alg:example}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} data $x_i$, size $m$
+   \REPEAT
+   \STATE Initialize $noChange = true$.
+   \FOR{$i=1$ {\bfseries to} $m-1$}
+   \IF{$x_i > x_{i+1}$} 
+   \STATE Swap $x_i$ and $x_{i+1}$
+   \STATE $noChange = false$
+   \ENDIF
+   \ENDFOR
+   \UNTIL{$noChange$ is $true$}
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Experimental Work}
+\label{sec:exp}
 
 \subsubsection*{Inference}
 
 At this point, we have the Bayesian network ready, and we would like to perform Inference. More formally, given that a CI will change (our evidence), we want
 to infer the probability that the other CIs in the network might change as well. Unfortunately, neither of the two tools previously used provide an Bayesian
 inference engine. We, therefore, use JavaBayes in this step since it accepts the same ARFF format used by Weka. We using a one month testing set where we try
-to predict all the change orders in April 2008 (469 reports). There was a total of XX change orders in that month. For each change order, we would take the
+to predict all the change orders in April 2008 (883 reports). There was a total of XX change orders in that month. For each change order, we would take the
 first CI as the initial CI to change, then we would set that as evidence, and update the beliefs of all the nodes (CIs) in the network using JavaBayes. We would
 then loop on all the updated CIs, and add those that match our threshold criteria to the predicted change set. To simulate a real life scenario, we then checked
 which of these predicted CIs actually lies in the target change set we are trying to predict. This is similar to an analyst accepting CIs into their change set.
 These common CIs would then also be marked as observations so that we can predict now that I'm going to change B and C too, what else do I need to change.
 Again, we would calculate the posterior probability, and continue doing so until there are no more common CIs. We would then calculate the recall, precision,
 and F-measure accordingly.
-
-\subsubsection*{Results}
-
-
-\subsection{Model 3}
-
-\subsubsection*{Data Preprocessing}
-
-For this model, we only used the list of CIs appearing more than 12 times (120 distinct CIs). 
-
-\subsubsection*{Building the Model}
-
-Using CIs in this list only, we constructed the structure of the Bayesian network by adding in CMDB relationships between the CIs. We stuck to this set only to
-ensure that all the CIs in the network, are also present in the observations. Fourty-eight edges were added to the structure of the network. Using these 120
-CIs, we had XXX observations. Again, we loaded the produced structure in Weka, and learned the CPTs using the observations from the three months. We then took
-the produced Bayesian network, and used JavaBayes to perform the inference.
-
-\subsubsection*{Inference}
-
-
-
-\section{Building the model}
-\label{sec:model}
-
-\section{Experimental Work}
-\label{sec:exp}
 
 \section{Conclusion}
 \label{concl}
