@@ -93,7 +93,28 @@ need to be changed as well must be correctly identified. The set of CIs that wil
 
 \subsection{Bayesian Networks}
 
-BG info and what a bayesian network will look like in our case.
+Bayesian Networks, first introduced by Pearl~\cite{pearl1988probabilistic} are probabilistic graphical models. Each node in a graph represents a random
+variable, and nodes are connected through edges which represent probabilistic dependencies~\cite{benbayesian}. A Bayesian network is a Directed
+Acyclic Graph (DAG), and is essentially defined by two aspects: the structure of the graph and the Conditional Probability Tables (CPTs) probabilistically
+relating connected nodes. In this work, a node in the Bayesian network would be a CI which can take values {``true'',``false''} to donate the probability of it
+changing or not. The CPTs would essentially give the probability of one CI changing given its parents.
+
+Given a set of data consisting of observations for our variable space, machine learning techniques can be used to estimate the network. If the structure of the
+network is known, and we have full observability (i.e we can observe values for each variable), then learning the CPTs can be achieved through
+Maximum-likelihood estimation (MLE)~\cite{benbayesian}. MLE tries to maximize the log likelihood of the the training data which can simply be done by
+calculating the frequency of occurrence of the values of each variable given its parents. If the structure is known, but we only have partial observability (i.e
+missing data), then we can use a variation of MLE which is the Expectation Maximization algorithm~\cite{dempster1977maximum}. If the structure is not known in
+the first place, then searching through the model space, and calculating network scores for each produced network is necessary. The simplest algorithm for this
+is a Greedy search algorithm~\cite{friedman1996learning}.
+
+While searching for the best network that fits the training data, scores are needed for the produced networks in order to know which one is the best one. There
+are several types of scores that have been proposed in the literature. Two of the commonly used scores are the Minimum Description Length (MDL)
+score~\cite{rissanen1986stochastic} and the BDe score~\cite{heckerman1995learning}. The MDL score is based on finding the length of data required to store a
+network. It tries to balance the complexity of the induced network with the degree of accuracy of which the network represents the frequencies in the training
+data. Therefore, the lower the MDL score of a network, the better it is. The BDe score is proportional to the posterior probability of each network structure
+being scored, given the data. Accordingly, we are searching for the network that maximizes this probability. For large data sets, both metrics score
+structures similarly~\cite{friedman1996learning}. Since they are similar, we simply chose to use the BDe score in this work to compare the produced network
+structures.
 
 \subsection{Bayesian Network Tools}
 
@@ -107,9 +128,8 @@ the frequency values of each variable given its parents in the training set.
 
 \subsubsection{Banjo}
 Banjo~\cite{banjotool} is a tool written in Java which infers the structure of a Bayesian network given training data. It has two different search algorithms:
-Greedy and Simulated Annealing. For either of these search algorithms, it has two methods of proposing a new edge. The first is the ``proposeRandomLocalMove''
-which basically proposes a random addition or removal of an edge. The other is ``proposeAllLocalMoves'' which proposes all possible moves, and only keeps the
-best one (?). Banjo uses the BDe metric to compute a network's score.
+Greedy and Simulated Annealing. For either of these search algorithms, it has two methods of proposing a new edge. Banjo uses the BDe metric to compute a
+network's score. We used the Greedy search algorithm in our experiments.
 
 \subsubsection{JavaBayes}
 
@@ -189,18 +209,10 @@ five to allow the nodes to be related since there is really no class label in ou
 
 For the third method, we used the relations existing in the CMDB to infer the structure of the network. We used two
 variations for this. The first was to follow the direction of the relationship edges in the CMDB. That is if there is an edge from A to B, we will place an
-edge in the Bayesian network from A to B (we will call this model 3A). The second was to reverse the direction of the relationship edges in the CMDB. That is,
-if there is an edge from A to B, we will place an edge in the Bayesian network from B to A (we will call this model 3B). There was one problem, however, with
+edge in the Bayesian network from A to B. The second was to reverse the direction of the relationship edges in the CMDB. That is,
+if there is an edge from A to B, we will place an edge in the Bayesian network from B to A. There was one problem, however, with
 the generated networks. Two of the CIs had more than 15 parents to them which means that their CPTs will be intractable to compute. For those two CIs, we simply
 removed all their parents to make the computation tractable.
-
-\subsubsection{Method 4 (Missing Data)}
-
-This method is the same as the third one, except that we experimented with the missing data feature in Weka. Weka allows the user to specify missing values
-for any variable by simply putting a '?' instead of its value. Therefore, instead of putting the CIs that did not appear in a change order as false, we put a
-'?' in their place. This seemed closer to practice, because in reality, we are not sure whether this CI actually changed or not. Therefore, this model also has
-two parts: model 4A and model 4B where the first uses the CMDB relationships in their same direction, and the second uses the reverse direction. We could not
-do the same thing with Method 1 (which uses Banjo to learn the structure) since Banjo does not support missing data. WEKA MISSING
 
 \subsection{Estimating the CPTs}
 \label{sec:cpt}
@@ -208,6 +220,12 @@ do the same thing with Method 1 (which uses Banjo to learn the structure) since 
 After the structure was determined, we used the SimpleEstimator algorithm~\cite{witten2005data} built in Weka to calculate the CPTs for all networks. The
 SimpleEstimator uses equation BLA GET EQUATION After setting the data set to be the observations in our training set, Weka learned the CPTs for each of the
 networks above. This complete network was then saved as an BIF XML file to be used by JavaBayes for general inference as will be explained in the next section.
+
+Additionally, we experimented with the missing data feature in WEKA. Weka allows the user to specify missing values
+for any variable by simply putting a '?' instead of its value. Therefore, instead of putting the CIs that did not appear in a change order as false, we put a
+'?' in their place. This seemed closer to practice, because in reality, we are not sure whether this CI actually changed or not. We tried learning the CPTs for
+the network produced by WEKA classification, and for that produced using the CMDB relationships. The missing values were only used to learn the CPTs except in
+the case for WEKA where the structure was also learned using the missing values.
 
 
 \section{Experiment Setup}
@@ -317,9 +335,10 @@ F = 2 * \frac{precision * recall}{precision +recall}
 \label{fig:cmdbresults}
 \end{figure}
 
-For all the networks generated from the four different methods, and following the procedure described in Section~\ref{sec:setup}, we calculated the average
+For all the networks generated from different methods explained in Section~\ref{sec:structure}, and following the procedure described in
+Section~\ref{sec:setup}, we calculated the average
 recall and precision for all the change orders in the test set. Based on the average recall and precision values, we calculated the F-measure. For better
-visualization, we plot the results from the first two methods together, and the results from the second two methods together. 
+visualization, we plot the results from all the networks based on CMDB structure together, and the results from those based on Banjo and WEKA together.
 
 Figure~\ref{fig:cmdbresults} shows the F-measure obtained from the four different networks built based on CMDB relationships for structural information. The
 first observation is that reversing the relationship edges did not produce any difference in the results. The curves for the CMDB relationships and the reversed
@@ -337,7 +356,7 @@ of these networks is reflective of their relationships in terms of change.
 \label{fig:wekabnj}
 \end{figure}
 
-Figure~\ref{fig:wekabnj} compares the F-measure
+Figure~\ref{fig:wekabnj} compares the F-measure obtained from the graphs whose structure was built using Banjo versus those built using WEKA.
 
 \section{Related Work}
 \label{rel-work}
