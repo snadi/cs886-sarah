@@ -22,7 +22,7 @@
  
 \title{Using Bayesian Networks to Predict Change Sets in an IT System}
 
-\author{Sarah Nadi\\snadi@uwaterloo.ca\\University of Waterloo\\ Ontario, Canada}        
+\author{Sarah Nadi\\snadi@uwaterloo.ca\\CS886 - Fall 2010\\University of Waterloo\\ Ontario, Canada}        
 \thispagestyle{empty}
 \maketitle
 
@@ -62,8 +62,8 @@ We hope that we can obtain better results using Bayesian networks since they are
 The rest of this paper is organized as follows. Section~\ref{sec:bg} provides the background information necessary for this work. It explains the nature of
 CMDBs, Bayesian networks, and the tools we used for analyzing Bayesian networks. Section~\ref{sec:constructing} then presents the techniques we used to build
 our Bayesian network. This includes how we process the data, and build the different Bayesian networks accordingly. Section~\ref{sec:setup} details the
-setup we use for our experiments, and Section~\ref{sec:results} provides the results obtained. Section~\ref{sec:discussion} provides a general insight to the
-results, and future work that could be done to improve them. Section~\ref{sec:concl} concludes this paper.
+setup we use for our experiments, and Section~\ref{sec:results} provides the results obtained. Section~\ref{sec:future} provides future work that can be done
+to improve the obtained results. Section~\ref{sec:concl} concludes this paper.
 
 
 \section{Background}
@@ -143,7 +143,8 @@ PIC STILL NEEDS WORK
 
 \subsubsection{JavaBayes}
 
-JavaBayes is a Java tool for calculating marginal probabilities and expectations in a Bayesian network. In a network, nodes can be set to be observed, and then
+JavaBayes~\cite{javabayestool} is a Java tool for calculating marginal probabilities and expectations in a Bayesian network. In a network, nodes can be set to
+be observed, and then
 the posterior probability of the remaining nodes can be calculated using Bayes theorem. This is the functionality we need here since the CI that will be
 changed will be considered as observed to be ``true'', and then we need to calculate the posterior of the remaining CIs given this observation.
 
@@ -175,7 +176,7 @@ perspective. Adding the related parent CIs, we now had a set of 241 CIs. However
 Accordingly, we just kept CIs that appeared more than 12 times or were in the set of related CIs. This provided us our final data set of 170 CIs which we use
 throughout our models for fair comparison. Additionally, filtering out CIs meant filtering out some of the change orders that did not have any CIs satisfying
 our criteria (i.e. all the CIs that changed in them were outside our 170 CI set). This led to us having 1,305 change orders instead of 2,229 which was more
-manageable set. Accordingly, our training data set consisted of 170 variables (CIs), and 1,305 observations (change sets).  TRAINING?
+manageable set. Accordingly, our training data set consisted of 170 variables (CIs), and 1,305 observations (change sets).
 
 \subsubsection*{Data Format}
 \label{sec:format}
@@ -244,32 +245,38 @@ predict a change order.
    \caption{Generating Predictions using the Bayesian Network}
    \label{alg:simulation}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $change order$
-    \STATE {\bfseries Input:} $Bayesian network$
+   \STATE {\bfseries Input:} $changeOrder$
+    \STATE {\bfseries Input:} $BayesianNetwork$
+\STATE{\textbf{Input:}} $networkCIs$ 
     \STATE {\bfseries Input:} $threshold$
-    \STATE Set $initial CI$ = first CI in changeOrder
-    \STATE Set $occurred set$ = $change order$ - $initial CI$
-    \STATE Initialize $observed set$ = {$initial CI$}
-    \STATE Initialize $predicted set$ = {}
+    \STATE Set $initialCI$ = first CI in changeOrder
+    \STATE Set $occurredset$ = $changeOrder$ - $initialCI$
+    \STATE Initialize $observedSet$ = \{$initialCI$\}
+    \STATE Initialize $predictedSet$ = \{\}
    \REPEAT  
-    \STATE Initialize $new predictions$ = {}
+    \STATE Initialize $newPredictions$ = \{\}
+ \IF{$initialCI$ not in $networkCIs$} 
+\STATE return 
+\ENDIF
     \FOR{$node$ in $BayesianNetwork$}
-    \STATE $posterior$ = query $node$ in $Bayesian network$ using Banjo given observed set
-    \IF{$posterior > threshold$ and $node$ not in $predicted set$} 
-      \STATE Add $node$ to $new predictions$   
+    \STATE $posterior =$ query $node$ in $BayesianNetwork$ 
+    \IF{$posterior > threshold$ \textbf{and} $node$ \textbf{not in} $predicted set$} 
+      \STATE Add $node$ to $newPredictions$   
     \ENDIF
     \ENDFOR
 
-  \FOR{$prediction$ in $new predictions$}
-    \IF{$prediction$ in  $occurred set$}
+  \FOR{$prediction$ in $newPredictions$}
+    \IF{$prediction$ in  $occurredSet$}
       \STATE Add $prediction$ to $observedSet$
     \ENDIF
     \ENDFOR
-\STATE Add $new predictions$ to $predicted set$
+\STATE Add $newPredictions$ to $predictedSet$
 
-   \UNTIL{$new predictions$ is empty}
-\STATE $recall = (predicted set \cap occurred set)/occurred set$
-\STATE $precision = (predicted set \cap occurred set)/predicted set$
+   \UNTIL{$newPredictions$ is \{\}}
+\newline
+\STATE $recall=  \frac{predictedSet\cap occurredSet}{occurredSet}$
+\newline
+\STATE $precision = \frac{predictedSet\cap occurredSet}{predictedSet} $
 \end{algorithmic}
 \end{algorithm}
 
@@ -283,21 +290,19 @@ details by Nadi et al.~\cite{nadi2010}.
 To simulate this process for our experiments, we do the following. At this point, we have the Bayesian network ready, and we would like to perform Inference.
 More formally, given that a CI will change (our observation), we want to update our beliefs that the other CIs in the network might change as well.
 Unfortunately, neither of the two tools previously used provide a general inference engine. We, therefore, use JavaBayes in this step since it accepts
-the same XML BIFF format produced by WEKA. [We use a one month testing set where we try to predict all the change orders in April 2008. There was a total of
-883 change orders in that month which we use in our testing set. ] - REMOVE?
+the same XML BIFF format produced by WEKA. We use a one month testing set where we try to predict all the change orders in April 2008. There was a total of
+883 change orders in that month which we use in our testing set. 
 
 For each change order, we would take the first CI recorded as the initial CI to change, then we would set that as an observed node, and update
 the beliefs of all the nodes (CIs) in the network using JavaBayes. We are basically checking the posterior probability of each CI being ``true'' given our
-observation. We used different
-cutoff thresholds for the posterior probabilities we would consider. We would then loop on all the updated CIs, and add those that match our threshold criteria
-to
-the predicted change set. For example a threshold of 0.2 means that only nodes that have a posterior probability greater than 0.2 of having the value ``true''
-will be returned. To simulate a real life scenario, we then checked which of these predicted CIs actually lies in the target change set we are trying to
-predict. This is similar to an analyst accepting CIs into their change set. These common CIs would then also be marked as observed so that we can predict
-what else will need to change given that these CIs are also changing. Again, we would calculate the posterior probability given the new observations, and
-continue doing
-so until there are no more common CIs. All the CIs that match the threshold criteria (whether accepted by the analyst or not) are part of the predicted
-set. These steps (shown in Algorithm~\ref{alg:simulation} would be repeated for each change order.
+observation. We used different cutoff thresholds for the posterior probabilities we would consider. We would then loop on all the updated CIs, and add those
+that match our threshold criteria to the predicted change set. For example a threshold of 0.2 means that only nodes that have a posterior probability greater
+than 0.2 of having the value ``true'' will be returned. To simulate a real life scenario, we then checked which of these predicted CIs actually lies in the
+target change set we are trying to predict. This is similar to an analyst accepting CIs into their change set. These common CIs would then also be marked as
+observed so that we can predict what else will need to change given that these CIs are also changing. Again, we would calculate the posterior probability given
+the new observations, and continue doing so until there are no more common CIs. All the CIs that match the threshold criteria (whether accepted by the analyst
+or not) are part of the predicted set. These steps (shown in Algorithm~\ref{alg:simulation} would be repeated for each change order. Note that if the initial
+CI is not in the list of CIs we used for training, then the predicted set will be empty since we have not seen this CI before.
 
 \subsection{Evaluation Techniques}
 
@@ -408,7 +413,7 @@ F = 2 * \frac{precision * recall}{precision +recall}
 For all the networks generated from the different methods explained in Section~\ref{sec:structure}, and following the procedure described in
 Section~\ref{sec:setup}, we calculated the average recall and precision for all the change orders in the test set. Based on the average recall and precision
 values, we calculated the F-measure. Table~\ref{tab:results} summarizes the recall and precision obtained for all models. For better visualization, we plot the
-results from all the networks based on CMDB structure together, and the results from those based on Banjo and WEKA together.
+F-measure from all the networks based on CMDB structure together, and the F-measure from those based on Banjo and WEKA together.
 
 Figure~\ref{fig:cmdbresults} shows the F-measure obtained from the four different networks built based on CMDB relationships for structural information. The
 first observation is that reversing the relationship edges did not produce any difference in the results. The curves for the CMDB relationships and the reversed
@@ -429,14 +434,19 @@ of these networks is reflective of their relationships in terms of change.
 Figure~\ref{fig:wekabnj} compares the F-measure obtained from the graphs whose structure was built using Banjo versus those built using WEKA. It also shows the
 effects including missing data in both cases. Surprisingly, it seems that the network built using WEKA has better performance (although only slightly better).
 However, marking CIs that have not been changed as unobserved (missing) instead of ``false'' slightly deteriorated the predictive performance. Overall, the
-performance of the two networks are very similar which comes as a surprise since WEKA is really a classification engine and assumes that the last variable in
-the data is the target class which is not the case in our data. 
+performance of the two networks are very similar which comes as a a bit of a surprise since WEKA is really a classification engine and assumes that the last
+variable in the data is the target class which is not the case in our data. 
 
 We also note when the threshold is 1.0 (i.e no predictions are being made), the recall is not 0 although the precision is 1. This is because there are many
 change sets of size 1 which makes the occurred set of size 0, and thus recall being automatically 1. Please refer to Nadi et. al~\cite{nadi2010} for more
 details. Additionally, all networks start at the same recall and precision values when the threshold is 0 since simply all 170 CIs are predicted. This is
 because in the Bayesian network, the probability of any CI is never really zero. It may be very close to zero, but will never be completely unlikely.
 
+From looking at the results, we were a bit worried that most of the predictions were empty sets, because the initial CI was not seen before in the training
+data. Therefore, we thought of limiting the test data to only those nodes that appeared in the training, and adjusting the observations in the test set
+accordingly. In that case, for almost all models, we would either see perfect recall and almost zero precision or perfect precision and the recall obtained
+when no predictions are made. This indicates that limiting the test data to the same set of CIs used in training leads to some sort
+of overfitting. These results are not shown here due to space limitations.
 
 
 \section{Related Work}
@@ -460,12 +470,28 @@ algorithm built in WEKA~\cite{witten2005data}.
 \section{Future Work}
 \label{sec:future}
 
-There is still some work that needs to be done in this area. First, it would be intersting to experiment with undirected graphs. For our problem, when two CIs,
+There is still some work that needs to be done in this area. First, it would be interesting to experiment with undirected graphs. For our problem, when two CIs,
 A and B, occur in the same change order, it is hard to determine whether A caused B to change or B caused A to change. Therefore, using an undirected model,
-such as a Markov network could be interesting in this setting. Unfortunately, due to time constraints, we could not experiment with that. 
+such as a Markov network could be interesting in this setting. Unfortunately, due to time constraints, we could not experiment with that. Another possible
+expansion is to use the CMDB relationships more carefully when determining the structure of the network. Currently, we either add edges to the Bayesian network
+following the direction of those in the CMDB or in the reverse direction. It would be interesting to determine which set of relationships semantically make
+sense to have the causality relationship in their same direction, and which make sense to have it in the opposite direction. That way, the structure of the
+network produced could perhaps be more accurate.
+
+Another addition would be to make the model more ``intelligent''. That is, instead of not predicting anything at all for CIs that have not been previously
+seen, it can find a similar CI it has information about, and predict the change set based on it. The challenge here is how to define ``similar''. This can
+simply be the same type of CI (i.e. database server, application, router etc.) with the assumption that CIs of the same type will behave similarly or it can be
+CIs with the same relationships. This would require further investigation as to which criteria is the best for describing similarity here.
 
 \section{Conclusion}
 \label{concl}
+
+In this work, we experimented with Bayesian networks in the context of change set predictions for IT systems. Given the Configuration Items (CIs) the analyst
+wants to change in the system, we can predict what other CIs might need to be changed as well. We built different Bayesian networks based on different
+information such as CMDB relationships or using structural learning algorithms such as the Greedy algorithm. Overall, all the networks built gave us, more or
+less, the same results. We believe that this is a good start for this exploratory work which indicates that Bayesian networks can be employed in change set
+detection. However, more work needs to be done in terms of making better predictions for unseen CIs, and in terms of exploring other types of probabilistic
+graphs that might be used in this context.
 
 
 \bibliography{references}
