@@ -50,8 +50,8 @@ effects.
 Many of the organizations with large and sophisticated IT systems employ a Configuration Management Database (CMDB) to help them manage these systems.
 The CMDB keeps track of all the components in a system, how they are related, as well as all the changes that have occurred to them. Any component in the CMDB
 is called a Configuration Item (CI). In previous work~\cite{nadi2010}, we mined the CMDB repository for historical co-changes, and used the mined correlations
-to predict change sets. That is, given an initial CI that is going to change, we predict what other CIs might need to be changed as well. We obtained really
-promising results in terms of recall and precision (69.8\% and 88.5\% respectively). 
+to predict change sets. That is, given an initial CI that is going to change, we predict what other CIs might need to be changed as well. We obtained
+promising results in terms of recall and precision. 
 
 In this paper, we wish to examine the same problem, but from a Bayesian perspective. Instead of looking at pairwise historical co-changes of CI, we would like
 to consider all the changed CIs, and learn the relationships between them. That is, given a set of observations about how different CIs change
@@ -62,7 +62,7 @@ We hope that we can obtain better results using Bayesian networks since they are
 The rest of this paper is organized as follows. Section~\ref{sec:bg} provides the background information necessary for this work. It explains the nature of
 CMDBs, Bayesian networks, and the tools we used for analyzing Bayesian networks. Section~\ref{sec:constructing} then presents the techniques we used to build
 our Bayesian network. This includes how we process the data, and build the different Bayesian networks accordingly. Section~\ref{sec:setup} details the
-setup we use for our experiments, and Section~\ref{sec:results} provides the results obtained. Section~\ref{sec:future} provides future work that can be done
+setup we use for our experiments, and Section~\ref{sec:results} provides the results obtained. Section~\ref{sec:future} suggests future work that can be done
 to improve the obtained results. Section~\ref{sec:concl} concludes this paper.
 
 
@@ -76,8 +76,8 @@ the configuration of these items, their change history, their incident history, 
 referred to as a Configuration Item (CI). Figure~\ref{fig:cmdbExample} shows an example CMDB to illustrate the concepts of CIs and relationships.
 
 A CMDB provides a basis for decision making processes such as Incident Management, Change Management, etc.  In this paper, we focus on the process of Change
-Management, and in particular, on the problem of change set detection. A \textit{change} is the addition, modification, or removal of anything that could affect
-on IT services. A poorly planned change may lead to a fault in the system. Accordingly, when one wants to change a CI is the system, other CIs that might
+Management, and in particular, on the problem of change set detection. A \textit{change} is the addition, modification, or removal of anything that could
+affect IT services. A poorly planned change may lead to a fault in the system. Accordingly, when one wants to change a CI is the system, other CIs that might
 need to be changed as well must be correctly identified. We refer to the set of CIs that will need to be modified for the change to be complete ias the
 \textit{change set}.
 
@@ -130,8 +130,8 @@ below.
 
 WEKA~\cite{hall2009weka} is a Java toolbox for machine learning. It provides different algorithms for classification and clustering as well as other machine
 learning problems. It has Bayesian learning techniques for classification problems. Additionally, it provides explorations tools for Bayesian
-Networks, and allows the user to learn the structure and CPTs of a Bayesian Network. IN terms of learning CPTs, one of the algorithms WEKA implements is
-the SimpleEstimator algorithm~\cite{witten2005data} implemented which we use in our work. This simply estimates the probability values on edges based on
+Networks, and allows the user to learn the structure and CPTs of a Bayesian Network. In terms of learning CPTs, one of the algorithms WEKA implements is
+the SimpleEstimator algorithm~\cite{witten2005data} which we use in our work. This simply estimates the probability values on edges based on
 the frequency values of each variable given its parents in the training set.
 
 \subsubsection{Banjo}
@@ -160,7 +160,8 @@ step to build the network which is estimating the CPTs. Figure~\ref{fig:process}
 \label{sec:data}
 
 \subsubsection*{Data Size}
-The data set available to us in the sample CMDB we have is from three years, and has 7,999 distinct CIs, and 27,305 change orders. This amount of data
+The data set available to us in the sample CMDB we have is from three years (Jan 2006 - Dec. 2008), and has 7,999 distinct CIs, and 27,305 change orders.
+This amount of data
 was infeasible to work with as no tool could handle such a large amount of variables in a Bayesian network. For the purposes of this project, which is mainly to
 experiment with Bayesian techniques for change set prediction, it is sufficient to choose a small representative subset of the data. Accordingly, in order to be
 able to test things properly, we used observations from three months data from January 1, 2008 to March 31, 2008 to build the model. However, even in such a
@@ -170,7 +171,8 @@ preprocessing.
 First, we removed all CIs that have changed less than 12 times within this time frame  (i.e were associated with less than 12 different change orders in our
 training observations). There is no particular reason for choosing 12 as a cut off. It simply gave a feasible data set to deal with. This yielded 120 distinct
 CIs. Then, in order to slightly increase our variable space to include other related CIs, we found all the parent CIs related to these 120 CIs from the CMDB
-perspective. Adding the related parent CIs, we now had a set of 241 CIs. However, some of the added parent CIs may not be in the original set of 2,841 CIs.
+perspective (i.e. had a relationship edge in the CMDB). Adding the related parent CIs, we now had a set of 241 CIs. However, some of the added parent CIs may
+not be in the original set of 2,841 CIs.
 Accordingly, we just kept CIs that appeared more than 12 times or were in the set of related CIs. This provided us our final data set of 170 CIs which we use
 throughout our models for fair comparison. Additionally, filtering out CIs meant filtering out some of the change orders that did not have any CIs satisfying
 our criteria (i.e. all the CIs that changed in them were outside our 170 CI set). This led to us having 1,305 change orders instead of 2,229 which was more
@@ -189,7 +191,7 @@ data consisted of an observation entry for each change order with the CIs marked
 
 \subsection{Network Structure}
 \label{sec:structure}
-There were essentially three different ways in which we could estimate the structure of the network. We, thus, built a Bayesian Network using each technique to
+There were essentially three different ways in which we could estimate the structure of the network. We, thus, built a Bayesian network using each technique to
 be able to compare their performance.
 
 
@@ -201,11 +203,12 @@ there. Banjo produced five different top-scoring networks (having the same score
 
 \subsubsection{Method 2 (WEKA Classification)}
 
-Although our research problem as currently defined is not really a classification problem, we want to examine how the network built by the BayesNet classifier
+Although our research problem as currently defined is not really a classification problem, we wanted to examine how the network built by the BayesNet classifier
 in WEKA will perform. Accordingly, we estimated the structure of the network using the K2 structure learning algorithm implemented in WEKA which is also a
 greedy
 search based learning algorithm. The default maximum number of parents allowed for any node is one (a Naive Bayesian Network). However, we used a maximum of
-five to allow the nodes to be related since there is really no class label in our data set. We could not experiment with other techniques in WEKA because they
+five to allow the nodes to be related since there is really no class label in our data set. We could not experiment with other structural learning techniques in
+WEKA because they
 do not allow multiple parents.
 
 \subsubsection{Method 3 (CMDB Relationships)}
@@ -215,7 +218,7 @@ variations for this. The first was to follow the direction of the relationship e
 B, we will place an
 edge in the Bayesian network from A to B. The second was to reverse the direction of the relationship edges in the CMDB. That is,
 if there is a relationship edge from A to B in the CMDB, we will place an edge in the Bayesian network from B to A. There was one problem, however, with
-the generated networks. Two of the CIs had more than 15 parents to them which means that their CPTs will be intractable to compute. For those two CIs, we simply
+the generated networks. Two of the CIs had more than 15 parents to them which made their CPTs more intractable to compute. For those two CIs, we simply
 removed all their parents to make the computation tractable.
 
 \subsection{Estimating the CPTs}
@@ -226,8 +229,9 @@ setting the data set to be the observations in our training set (an ARFF file), 
 networks above. This complete network was then saved as an BIF XML file to be used by JavaBayes for general inference as will be explained in the next section.
 
 Additionally, we experimented with the missing data feature in WEKA. WEKA allows the user to specify missing values
-for any variable by simply putting a '?' instead of its value. Therefore, instead of putting the CIs that did not appear in a change order as false, we put a
-'?' in their place. This seemed closer to practice, because in reality, we are not sure whether this CI actually changed or not. When using Banjo or the CMDB
+for any variable by simply putting a '?' instead of its value. Therefore, instead of marking the CIs that did not appear in a change order as ``false'', we put
+a
+``?'' in their place. This seemed closer to practice, because in reality, we are not sure whether this CI actually changed or not. When using Banjo or the CMDB
 relationships to estimate the structure of the network, the missing values were only inserted when learning the CPTs. When using WEKA, the missing values were
 inserted both to learn the network, and to estimate the CPTs.
 
@@ -289,7 +293,7 @@ To simulate this process for our experiments, we do the following. At this point
 More formally, given that a CI will change (our observation), we want to update our beliefs that the other CIs in the network might change as well.
 Unfortunately, neither of the two tools previously used provide a general inference engine. We, therefore, use JavaBayes in this step since it accepts
 the same XML BIFF format produced by WEKA. We use a one month testing set where we try to predict all the change orders in April 2008. There was a total of
-883 change orders in that month which we use in our testing set. 
+883 change orders in that month which we use in our testing set. No preprocessing was performed on the testing data.
 
 For each change order, we would take the first CI recorded as the initial CI to change, then we would set that as an observed node, and update
 the beliefs of all the nodes (CIs) in the network using JavaBayes. We are basically checking the posterior probability of each CI being ``true'' given our
@@ -298,8 +302,9 @@ that match our threshold criteria to the predicted change set. For example a thr
 than 0.2 of having the value ``true'' will be returned. To simulate a real life scenario, we then checked which of these predicted CIs actually lies in the
 target change set we are trying to predict. This is similar to an analyst accepting CIs into their change set. These common CIs would then also be marked as
 observed so that we can predict what else will need to change given that these CIs are also changing. Again, we would calculate the posterior probability given
-the new observations, and continue doing so until there are no more common CIs. All the CIs that match the threshold criteria (whether accepted by the analyst
-or not) are part of the predicted set. These steps (shown in Algorithm~\ref{alg:simulation} would be repeated for each change order. Note that if the initial
+the new observations, and continue doing so until there are no more new CIs to predict. All the CIs that match the threshold criteria (whether accepted by the
+analyst
+or not) are part of the predicted set. These steps (shown in Algorithm~\ref{alg:simulation}) would be repeated for each change order. Note that if the initial
 CI is not in the list of CIs we used for training, then the predicted set will be empty since we have not seen this CI before.
 
 \subsection{Evaluation Techniques}
@@ -410,7 +415,8 @@ F = 2 * \frac{precision * recall}{precision +recall}
 
 For all the networks generated from the different methods explained in Section~\ref{sec:structure}, and following the procedure described in
 Section~\ref{sec:setup}, we calculated the average recall and precision for all the change orders in the test set. Based on the average recall and precision
-values, we calculated the F-measure. Table~\ref{tab:results} summarizes the recall and precision obtained for all models. For better visualization, we plot the
+values, we calculated the F-measure. Table~\ref{tab:results} summarizes the recall and precision obtained for all models rounded to three decimal places. For
+better visualization, we plot the
 F-measure from all the networks based on CMDB structure together, and the F-measure from those based on Banjo and WEKA together.
 
 Figure~\ref{fig:cmdbresults} shows the F-measure obtained from the four different networks built based on CMDB relationships for structural information. The
@@ -445,8 +451,8 @@ change sets of size 1 which makes the occurred set of size 0, and thus recall be
 details. Additionally, all networks start at the same recall and precision values when the threshold is 0 since simply all 170 CIs are predicted. This is
 because in the Bayesian network, the probability of any CI is never really zero. It may be very close to zero, but will never be completely unlikely.
 
-From looking at the results, we were a bit worried that most of the predictions were empty sets, because the initial CI was not seen before in the training
-data. Therefore, we thought of limiting the test data to only those nodes that appeared in the training, and adjusting the observations in the test set
+Given that there will be many CIs in the testing data that have not been seen before in the training, we thought of limiting the test data to only
+those nodes that appeared in the training, and adjusting the observations in the test set
 accordingly. In that case, for almost all models, we would either see perfect recall and almost zero precision or perfect precision and the recall obtained
 when no predictions are made. This indicates that limiting the test data to the same set of CIs used in training leads to some sort
 of overfitting. These results are not shown here due to space limitations.
@@ -457,7 +463,8 @@ of overfitting. These results are not shown here due to space limitations.
 
 Mirarab et al.~\cite{mirarab2007} investigate the same problem as our work. They build three
 different Bayesian Networks, one that is based on package and class dependency information (static relationships), one which is dependent on historical
-co-changes, and one which uses both. For the first graph, the initial structure is essentially ``given'' according to the static dependencies, and then the CPTs
+co-changes, and one which uses both. For the first graph, the initial structure is essentially ``given'' according to the static dependencies in the code, and
+then the CPTs
 are learnt using the importance sampling algorithm proposed by Changhe and Marek~\cite{yuan2003importance}. The way static dependencies are defined in their
 case is specific to Java. The third one is essentially the first graph, but updated using the historic change information according to the Expectation
 Maximization (EM) algorithm~\cite{dempster1977maximum}. The second was solely based on historic information where the network is build using a greedy structure
@@ -474,7 +481,8 @@ the network.
 \section{Future Work}
 \label{sec:future}
 
-There is still some work that needs to be done in this area. First, it would be interesting to experiment with undirected graphs. For our problem, when two CIs,
+There is still a lot of work that needs to be done in this area. First, it would be interesting to experiment with undirected graphs. For our problem, when two
+CIs,
 A and B, occur in the same change order, it is hard to determine whether A caused B to change or B caused A to change. Therefore, using an undirected model,
 such as a Markov network could be interesting in this setting. Unfortunately, due to time constraints, we could not experiment with that. Another possible
 expansion is to use the CMDB relationships more carefully when determining the structure of the network. Currently, we either add edges to the Bayesian network
@@ -485,7 +493,7 @@ network produced could perhaps be more accurate.
 Another addition would be to make the model more ``intelligent''. That is, instead of not predicting anything at all for CIs that have not been previously
 seen, it can find a similar CI it has information about, and predict the change set based on it. The challenge here is how to define ``similar''. This can
 simply be the same type of CI (i.e. database server, application, router etc.) with the assumption that CIs of the same type will behave similarly or it can be
-CIs with the same relationships. This would require further investigation as to which criteria is the best for describing similarity here.
+CIs with the same relationships. This would require further investigation as to which criteria is the best for describing similarity in this context.
 
 \section{Conclusion}
 \label{sec:concl}
@@ -493,7 +501,8 @@ CIs with the same relationships. This would require further investigation as to 
 In this work, we experimented with Bayesian networks in the context of change set predictions for IT systems. Given the Configuration Items (CIs) the analyst
 wants to change in the system, we can predict what other CIs might need to be changed as well. We built different Bayesian networks based on different
 information such as CMDB relationships or using structural learning algorithms such as the Greedy algorithm. Overall, all the networks built gave us, more or
-less, the same results. We believe that this is a good start for this exploratory work which indicates that Bayesian networks can be employed in change set
+less, the same results (an F-measure of about 0.6). We believe that this is a good start for this exploratory work which indicates that Bayesian networks can be
+employed in change set
 detection. However, more work needs to be done in terms of making better predictions for unseen CIs, and in terms of exploring other types of probabilistic
 graphs that might be used in this context. We hope to expand this work to explore more variations of Bayesian learning in order to get better change set
 predictions.
